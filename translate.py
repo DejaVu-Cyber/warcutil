@@ -29,7 +29,7 @@ def translate_text(text_list : list[str], client : translate.Client ) -> list[st
         try:
             ret += [result["translatedText"] for result in client.translate(arr, target_language="en")]
         except Exception as inst:
-            print(arr)
+            print(inst)
             
     
     return ret
@@ -66,17 +66,20 @@ def check(element : Tag):
         return False
     return ele_all and ischinese(str(element))
 
-def translate_html(html_doc : str, client : translate.Client) -> str:
+# returns the number of characters translated and the data
+def translate_html(html_doc : str, client : translate.Client, dryrun=False) -> tuple[int,str]:
     soup = BeautifulSoup(html_doc, 'html.parser')
     if soup.html:
         soup.html["lang"] = "en"
     p : list[Tag] = list(filter(lambda x : check(x), soup.find_all()))
     to_trans = [str(i) for i in p]
-    trans = translate_text(to_trans, client)
-    for elem, string in zip(p,trans):
-        phrase = BeautifulSoup(string,'html.parser')
-        elem.replace_with(phrase)
-    return str(soup)
+    count = len(''.join(to_trans))
+    if not dryrun:
+        trans = translate_text(to_trans, client)
+        for elem, string in zip(p,trans):
+            phrase = BeautifulSoup(string,'html.parser')
+            elem.replace_with(phrase)
+    return count,str(soup)
 
 def get_json(json_obj, q : deque):
     if type(json_obj) is list:
@@ -103,11 +106,13 @@ def put_json(json_obj, q : deque) -> None | str:
         return q.pop()
 
 
-def translate_json(json_doc : str, client : translate.Client) -> str:
-    loaded = json.loads(json_doc, parse_float=decimal.Decimal)
+def translate_json(json_doc : str, client : translate.Client, dryrun=False) -> tuple[int,str]:
+    loaded = json.loads(json_doc)
     q = deque()
     get_json(loaded,q)
     to_trans = list(q)
-    trans = translate_text(to_trans, client)
-    put_json(loaded, deque(trans))
-    return json.dumps(loaded)
+    count = len(''.join(to_trans))
+    if not dryrun:
+        trans = translate_text(to_trans, client)
+        put_json(loaded, deque(trans))
+    return count,json.dumps(loaded)

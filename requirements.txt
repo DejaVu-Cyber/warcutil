@@ -1,0 +1,6 @@
+warcio
+beautifulsoup4
+google-cloud-translate
+boto3
+wacz
+charset-normalizer 
